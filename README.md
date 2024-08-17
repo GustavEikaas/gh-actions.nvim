@@ -39,6 +39,11 @@ Actions list
 
 ![image](https://github.com/user-attachments/assets/355ff0a1-e25b-4c94-b4be-68375d2963b7)
 
+#### Keymap
+
+- `<leader>r` -> refresh
+- `<leader>o` -> open details
+
 ### Run
 Trigger workflow_dispatch events directly from neovim
 
