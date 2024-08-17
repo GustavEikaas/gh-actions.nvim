@@ -199,35 +199,43 @@ end
 M.run = function()
   local buf_utils = require("gh-actions.render")
   local buf = buf_utils.createStdoutBuf()
-  local lines = {}
+  local err_lines = {}
+  local workflows = {}
   vim.fn.jobstart("gh workflow list", {
     stdout_buffered = true,
     on_stdout = function(_, data)
       for _, value in ipairs(data) do
-        table.insert(lines, value)
+        local pattern = "(%w[%w%s]*)%s+(%w+)%s+(%d+)"
+        local name, _, number = value:match(pattern)
+        table.insert(workflows, { name = name, id = number })
       end
     end,
     on_stderr = function(_, data)
       for _, value in ipairs(data) do
-        table.insert(lines, value)
+        table.insert(err_lines, value)
       end
     end,
     on_exit = function(_, b)
-      buf.write(lines)
-      vim.notify("code " .. b)
+      if b == 0 then
+        buf.write_table(workflows, { "name", "id" })
+        vim.api.nvim_buf_set_extmark(buf.bufnr, require("gh-actions.constants").ns_id, 0, 0, {
+          virt_text = { { string.format("<leader>r to open"), "Character" } },
+          virt_text_pos = "right_align",
+          priority = 200,
+        })
+      else
+        buf.write(err_lines)
+      end
     end
   })
-
   buf.write({ "Loading workflows..." })
 
   vim.keymap.set('n', '<leader>r', function()
     local line_num = vim.api.nvim_win_get_cursor(0)[1]
-    local line = lines[line_num]
-    local pattern = "(%w[%w%s]*)%s+(%w+)%s+(%d+)"
-    local _, _, number = line:match(pattern)
+    local id = workflows[line_num - 2].id
     local yaml_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_option(yaml_buf, "filetype", "yaml")
-    yaml_window(yaml_buf, number)
+    yaml_window(yaml_buf, id)
   end, { buffer = buf.bufnr, noremap = true, silent = true })
 end
 
