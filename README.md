@@ -37,7 +37,7 @@ Actions list
 
 ### List
 
-![image](https://github.com/user-attachments/assets/e67b791f-ebae-4191-a840-ef477db6b2f4)
+![image](https://github.com/user-attachments/assets/355ff0a1-e25b-4c94-b4be-68375d2963b7)
 
 ### Run
 Trigger workflow_dispatch events directly from neovim
