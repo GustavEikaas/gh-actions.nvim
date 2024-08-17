@@ -1,5 +1,8 @@
 # gh-actions.nvim
 
+> [!Warning]
+> This plugin is a work in progress and might have bugs and breaking changes
+
 ## Run gh actions directly from neovim
 Are you tired of visiting github in the browser to run your workflows or perhaps you use the CLI but remembering all the names and inputs is hard. Then this tool is for you, run workflows directly from neovim.
 
