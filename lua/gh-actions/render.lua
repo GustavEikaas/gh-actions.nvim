@@ -44,8 +44,26 @@ local function create_table_string(objects, order)
   return result
 end
 
-M.createStdoutBuf = function()
-  local outBuf = vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratch
+local function buffer_exists(name)
+  local bufs = vim.api.nvim_list_bufs()
+  for _, buf_id in ipairs(bufs) do
+    if vim.api.nvim_buf_is_valid(buf_id) then
+      local buf_name = vim.api.nvim_buf_get_name(buf_id)
+      local buf_filename = vim.fn.fnamemodify(buf_name, ":t")
+      if buf_filename == name then
+        return buf_id
+      end
+    end
+  end
+  return nil
+end
+
+M.createStdoutBuf = function(name)
+  local existing_buf = name == nil and nil or buffer_exists(name)
+  local outBuf = existing_buf or vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratch
+  if existing_buf == nil and name ~= nil then
+    vim.api.nvim_buf_set_name(outBuf, name)
+  end
   vim.api.nvim_win_set_buf(0, outBuf)
   vim.api.nvim_set_current_buf(outBuf)
   vim.api.nvim_win_set_width(0, 30)

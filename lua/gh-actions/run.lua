@@ -6,10 +6,8 @@ local function dispatch(number, json, yaml_buf, on_success)
     table.insert(fields, string.format("--field '%s=%s'", key, value))
   end
   local parsed = table.concat(fields, " ")
-  vim.notify("dispatching")
   local lines = {}
   local cmd = string.format("gh workflow run %s %s --ref %s", number, parsed, json.ref)
-  vim.notify(cmd)
   vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     on_stdout = function(_, data)
@@ -167,7 +165,6 @@ local function yaml_window(buf, number)
           local on_success = function()
             vim.api.nvim_buf_delete(buf, { force = true })
             vim.api.nvim_buf_delete(run_float_window.run_buf, { force = true })
-            vim.api.nvim_win_close(run_float_window.win, true)
             vim.cmd("Actions list")
           end
 
@@ -198,7 +195,7 @@ end
 
 M.run = function()
   local buf_utils = require("gh-actions.render")
-  local buf = buf_utils.createStdoutBuf()
+  local buf = buf_utils.createStdoutBuf("Workflows")
   local err_lines = {}
   local workflows = {}
   vim.fn.jobstart("gh workflow list", {
