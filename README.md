@@ -40,14 +40,13 @@ Actions list
 Trigger workflow_dispatch events directly from neovim
 
 1. :Actions run
-2. <leader>r on your desired workflow
+2. `<leader>r` on your desired workflow
 3. The yaml definition is shown in the left float, the arguments for triggering is showed in the right float.
-4. Fill out the args and press <leader>r to trigger the workflow
-![image](https://github.com/user-attachments/assets/09fc9a7e-bd3f-44b8-82a7-1d275e7ea1af)
-
+4. Fill out the args and press `<leader>r` to trigger the workflow
+![image](https://github.com/user-attachments/assets/b988df90-df39-4748-b3bf-e3a315840d30)
 
 ## Requirements
-This functionality relies on [gh-cli](https://cli.github.com/)
+This functionality relies on [gh-cli](https://cli.github.com/) so make sure you have it installed
 
 ## Contributions
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make gh-actions.nvim even better!
