@@ -143,7 +143,7 @@ local function job_stderr_float(id, float)
         })
       end
     end,
-    on_exit = function(_, b)
+    on_exit = function()
       float:on_win_close(function()
         if vim.api.nvim_win_is_valid(stderr_float.win) then
           vim.api.nvim_win_close(stderr_float.win, true)
@@ -237,6 +237,16 @@ local function populate_list(buf)
         end
       end,
       on_exit = function()
+        vim.keymap.set('n', '<leader>o', function()
+          local line_num = vim.api.nvim_win_get_cursor(0)[1]
+          vim.notify("lines " .. #lines)
+          local line = lines[line_num - 2]
+          if line == nil then
+            return
+          end
+          job_details_float(line.id)
+        end, { buffer = buf.bufnr, noremap = true, silent = true })
+
         local order = { "status", "title", "branch", "name", "age" }
         buf.write_table(lines, order)
         local ns_id = require("gh-actions.constants").ns_id
@@ -247,14 +257,6 @@ local function populate_list(buf)
         })
       end
     })
-  vim.keymap.set('n', '<leader>o', function()
-    local line_num = vim.api.nvim_win_get_cursor(0)[1]
-    local id = lines[line_num - 2].id
-    if id == nil then
-      return
-    end
-    job_details_float(id)
-  end, { buffer = buf.bufnr, noremap = true, silent = true })
 end
 
 
@@ -270,7 +272,6 @@ M.list = function()
     end
     populate_list(buf)
     vim.defer_fn(refresh, 30000)
-    local ns_id = require("gh-actions.constants").ns_id
   end
 
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {

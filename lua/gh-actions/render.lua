@@ -67,19 +67,19 @@ M.createStdoutBuf = function(name)
   vim.api.nvim_win_set_buf(0, outBuf)
   vim.api.nvim_set_current_buf(outBuf)
   vim.api.nvim_win_set_width(0, 30)
-  vim.api.nvim_buf_set_option(outBuf, 'modifiable', false)
-  vim.api.nvim_buf_set_option(outBuf, "filetype", "actions")
+  vim.api.nvim_set_option_value("modifiable", false, { buf = outBuf })
+  vim.api.nvim_set_option_value("filetype", "actions", { buf = outBuf })
   return {
     write = function(lines)
-      vim.api.nvim_buf_set_option(outBuf, 'modifiable', true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = outBuf })
       vim.api.nvim_buf_set_lines(outBuf, 0, -1, true, lines)
-      vim.api.nvim_buf_set_option(outBuf, 'modifiable', false)
+      vim.api.nvim_set_option_value("modifiable", false, { buf = outBuf })
     end,
     write_table = function(objects, order)
       local lines = create_table_string(objects, order)
-      vim.api.nvim_buf_set_option(outBuf, 'modifiable', true)
+      vim.api.nvim_set_option_value("modifiable", true, { buf = outBuf })
       vim.api.nvim_buf_set_lines(outBuf, 0, -1, true, lines)
-      vim.api.nvim_buf_set_option(outBuf, 'modifiable', false)
+      vim.api.nvim_set_option_value("modifiable", false, { buf = outBuf })
     end,
     bufnr = outBuf
   }

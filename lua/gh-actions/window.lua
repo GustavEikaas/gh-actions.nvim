@@ -37,7 +37,7 @@ end
 
 function Window:buf_set_filetype(filetype)
   if self.buf ~= nil then
-    vim.api.nvim_buf_set_option(self.buf, "filetype", filetype)
+    vim.api.nvim_set_option_value('filetype', filetype, { buf = self.buf })
   end
 
   self.buf_opts.filetype = filetype
@@ -62,12 +62,12 @@ function Window:on_win_close(callback)
 end
 
 local function set_buf_opts(buf, opts)
-  vim.api.nvim_buf_set_option(buf, 'modifiable', opts.modifiable)
-  vim.api.nvim_buf_set_option(buf, 'filetype', opts.filetype)
+  vim.api.nvim_set_option_value('filetype', opts.filetype, { buf = buf })
+  vim.api.nvim_set_option_value('modifiable', opts.modifiable, { buf = buf })
 end
 
 function Window:write_buf(lines)
-  vim.api.nvim_buf_set_option(self.buf, 'modifiable', true)
+  vim.api.nvim_set_option_value('modifiable', true, { buf = self.buf })
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
   set_buf_opts(self.buf, self.buf_opts)
   return self

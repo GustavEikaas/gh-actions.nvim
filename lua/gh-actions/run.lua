@@ -8,6 +8,7 @@ local function dispatch(number, json, yaml_float, on_success)
   local parsed = table.concat(fields, " ")
   local lines = {}
   local cmd = string.format("gh workflow run %s %s --ref %s", number, parsed, json.ref)
+
   vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     on_stdout = function(_, data)
@@ -48,29 +49,6 @@ local function get_branch_name()
   return value
 end
 
-local function create_run_buf()
-  local run_buf = vim.api.nvim_create_buf(false, true)
-  local width = math.floor(vim.o.columns / 2) - 2
-  local height = 20
-
-  local opts = {
-    relative = "editor",
-    width = width,
-    height = height,
-    col = width + 2,                              -- Start just after the first window
-    row = math.floor((vim.o.lines - height) / 2), -- Centered vertically
-    style = "minimal",
-    border = "rounded"
-  }
-
-  local win = vim.api.nvim_open_win(run_buf, true, opts)
-
-  return {
-    win = win,
-    run_buf = run_buf
-  }
-end
-
 local function getDefaultBufferState(inputs)
   local lines = {}
   table.insert(lines, "{")
@@ -89,7 +67,7 @@ end
 
 local function run_window(run_float, number, yaml_float, inputs)
   run_float:write_buf(getDefaultBufferState(inputs))
-  vim.api.nvim_buf_set_option(run_float.buf, 'modifiable', true)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = run_float.buf })
 
   local function on_success()
     run_float:close()
