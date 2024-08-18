@@ -35,28 +35,37 @@ Actions run
 Actions list
 ```
 
-### List
-
+## List
+### List workflow runs
+- `<leader>r` to refresh
+- `<leader>o` to open details
+  
 ![image](https://github.com/user-attachments/assets/355ff0a1-e25b-4c94-b4be-68375d2963b7)
 ### Auto refresh enabled when workflow is still running
+- q to close
+  
 ![image](https://github.com/user-attachments/assets/5b34031b-24db-4710-9a92-f15afd7f63f7)
 ### Automatic stack trace on failed workflow run
+- q to close
+  
 ![image](https://github.com/user-attachments/assets/dc034b8d-4f6b-4549-81df-0fdf0200dbf8)
 
-
-#### Keymap
-
-- `<leader>r` -> refresh
-- `<leader>o` -> open details
-
-### Run
+## Run
 Trigger workflow_dispatch events directly from neovim
 
-1. :Actions run
-2. `<leader>r` on your desired workflow
-3. The yaml definition is shown in the left float, the arguments for triggering is showed in the right float.
-4. Fill out the args and press `<leader>r` to trigger the workflow
+### Workflow with workflow_dispatch trigger
+Input arguments are automatically populated
+- `<leader>r` to submit
+- q to close
+  
 ![image](https://github.com/user-attachments/assets/b988df90-df39-4748-b3bf-e3a315840d30)
+
+### Workflow without workflow_dispatch trigger
+Workflow definition is shown
+- q to close
+  
+![image](https://github.com/user-attachments/assets/9fcb1e02-de3f-47da-87b1-89829c046208)
+
 
 ## Requirements
 This functionality relies on [gh-cli](https://cli.github.com/) so make sure you have it installed
