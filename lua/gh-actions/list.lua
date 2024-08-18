@@ -40,8 +40,10 @@ local function get_job_status(status, conclusion)
     return "🔄"
   elseif conclusion == "success" then
     return "✔"
-  elseif conclusion == "failed" then
+  elseif conclusion == "failure" then
     return "❌"
+  elseif conclusion == "skipped" then
+    return "⏩"
   else
     return "❓"
   end
@@ -54,8 +56,10 @@ local function get_step_status(status, conclusion)
     return "🔄"
   elseif conclusion == "success" then
     return "✔"
-  elseif conclusion == "failed" then
+  elseif conclusion == "failure" then
     return "❌"
+  elseif conclusion == "skipped" then
+    return "⏩"
   else
     return "❓"
   end
@@ -68,8 +72,10 @@ local function get_workflow_status(status, conclusion)
     return "🔄"
   elseif conclusion == "success" then
     return "✔"
-  elseif conclusion == "failed" then
+  elseif conclusion == "failure" then
     return "❌"
+  elseif conclusion == "skipped" then
+    return "⏩"
   else
     return "❓"
   end
@@ -114,7 +120,55 @@ local function get_job_details_lines(details)
 end
 
 
-local function update_job_details(id, buf, win)
+local function job_stderr_float(id, float)
+  local lines = {}
+  vim.fn.jobstart(string.format("gh run view %s --log-failed", id), {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      for _, line in ipairs(data) do
+        local pattern = "^(%w+)%s+(%w+)%s+([%d%-:T%.Z]+)%s+(.*)$"
+        local job_name, step_name, timestamp, stderr = line:match(pattern)
+        if job_name == nil then
+          return
+        end
+        table.insert(lines, {
+          job_name = job_name,
+          step_name = step_name,
+          timestamp = timestamp,
+          stderr = stderr
+        })
+      end
+    end,
+    on_exit = function(_, b)
+      local stderr = require("gh-actions.window").new_float():pos_right():on_win_close(function()
+        float:pos_center()
+      end):create()
+      float:pos_left()
+
+      float:on_win_close(function()
+        if vim.api.nvim_win_is_valid(stderr.win) then
+          vim.api.nvim_win_close(stderr.win, true)
+        end
+      end)
+
+      local buf_lines = {}
+      for _, value in ipairs(lines) do
+        table.insert(buf_lines, string.format("%s: %s", value.step_name, value.stderr))
+      end
+      stderr:write_buf(buf_lines)
+
+      for line_index, value in ipairs(lines) do
+        vim.api.nvim_buf_add_highlight(stderr.buf, require("gh-actions.constants").ns_id, "ErrorMsg", line_index - 1,
+          #value.step_name + 2, -1)
+      end
+    end
+  })
+end
+
+local function update_job_details(id, float)
+  local win = float.win
+  local buf = float.buf
+
   local job_details = {}
   vim.fn.jobstart(string.format("gh run view %s --json %s", id, fields), {
     stdout_buffered = true,
@@ -123,19 +177,21 @@ local function update_job_details(id, buf, win)
     end,
     on_exit = function(_, b)
       if b == 0 then
-        vim.api.nvim_buf_set_option(buf, 'modifiable', true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, get_job_details_lines(job_details))
-        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+        float:write_buf(get_job_details_lines(job_details))
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Question", 0, 0, -1)
 
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Directory", 2, 0, -1)
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Directory", 3, 0, -1)
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Directory", 4, 0, -1)
 
+        if job_details.conclusion == "failure" then
+          job_stderr_float(id, float)
+        end
+
         if #job_details.conclusion == 0 then
           local function s()
             if vim.api.nvim_win_is_valid(win) and vim.api.nvim_buf_is_valid(buf) then
-              update_job_details(id, buf, win)
+              update_job_details(id)
             end
           end
           vim.defer_fn(s, 5000)
@@ -153,26 +209,9 @@ local function update_job_details(id, buf, win)
 end
 
 local function job_details_float(id)
-  local buf = vim.api.nvim_create_buf(false, true)
-  local width = math.floor(vim.o.columns / 2) - 2
-  local height = 20
-
-  local opts = {
-    relative = "editor",
-    width = width,
-    height = height,
-    col = math.floor((vim.o.columns - width) / 2),
-    row = math.floor((vim.o.lines - height) / 2),
-    style = "minimal",
-    border = "rounded"
-  }
-
-  local win = vim.api.nvim_open_win(buf, true, opts)
-  vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '<cmd>lua vim.api.nvim_win_close(' .. win .. ', true)<CR>',
-    { noremap = true, silent = true })
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Loading job run.." })
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-  update_job_details(id, buf, win)
+  local float = require("gh-actions.window").new_float():create()
+  float:write_buf({ "Loading job run.." })
+  update_job_details(id, float)
 end
 
 local function populate_list(buf)

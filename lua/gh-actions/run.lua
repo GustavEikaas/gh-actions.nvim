@@ -1,6 +1,6 @@
 local M = {}
 
-local function dispatch(number, json, yaml_buf, on_success)
+local function dispatch(number, json, yaml_float, on_success)
   local fields = {}
   for key, value in pairs(json.args) do
     table.insert(fields, string.format("--field '%s=%s'", key, value))
@@ -22,18 +22,14 @@ local function dispatch(number, json, yaml_buf, on_success)
     end,
     on_exit = function(_, b)
       if b ~= 0 then
-        local old_yaml = vim.api.nvim_buf_get_lines(yaml_buf, 0, -1, false)
+        local old_yaml = vim.api.nvim_buf_get_lines(yaml_float.buf, 0, -1, false)
         table.insert(lines, "")
-        table.insert(lines, "Press <leader>c to view yaml")
-        vim.api.nvim_buf_set_option(yaml_buf, 'modifiable', true)
-        vim.api.nvim_buf_set_lines(yaml_buf, 0, -1, true, lines)
-        vim.api.nvim_buf_set_option(yaml_buf, 'modifiable', false)
+        table.insert(lines, "Press <leader>c to view dismiss")
+        yaml_float:write_buf(lines)
 
         vim.keymap.set('n', '<leader>c', function()
-          vim.api.nvim_buf_set_option(yaml_buf, 'modifiable', true)
-          vim.api.nvim_buf_set_lines(yaml_buf, 0, -1, true, old_yaml)
-          vim.api.nvim_buf_set_option(yaml_buf, 'modifiable', false)
-        end, { buffer = yaml_buf, noremap = true, silent = true })
+          yaml_float:write_buf(old_yaml)
+        end, { buffer = yaml_float.buf, noremap = true, silent = true })
       else
         on_success()
       end
@@ -91,17 +87,21 @@ local function getDefaultBufferState(inputs)
   return lines
 end
 
-local function run_window(win, run_buf, number, yaml_buf, on_success, inputs)
-  vim.api.nvim_buf_set_keymap(run_buf, 'n', 'q', '<cmd>lua vim.api.nvim_win_close(' .. win .. ', true)<CR>',
-    { noremap = true, silent = true })
-  vim.api.nvim_buf_set_lines(run_buf, 0, -1, false, getDefaultBufferState(inputs))
-  vim.api.nvim_buf_set_option(run_buf, 'modifiable', true)
+local function run_window(run_float, number, yaml_float, inputs)
+  run_float:write_buf(getDefaultBufferState(inputs))
+  vim.api.nvim_buf_set_option(run_float.buf, 'modifiable', true)
 
+
+  local function on_success()
+    run_float:close()
+    yaml_float:close()
+    vim.cmd("Actions list")
+  end
   vim.keymap.set('n', '<leader>r', function()
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local json = vim.fn.json_decode(table.concat(lines, ""))
-    dispatch(number, json, yaml_buf, on_success)
-  end, { buffer = run_buf, noremap = true, silent = true })
+    dispatch(number, json, yaml_float, on_success)
+  end, { buffer = run_float.buf, noremap = true, silent = true })
 end
 
 
@@ -115,25 +115,9 @@ local function parse_inputs(yaml_string)
 end
 
 
-local function yaml_window(buf, number)
-  local width = math.floor(vim.o.columns / 2) - 2
-  local height = 20
-
-  local opts = {
-    relative = "editor",
-    width = width,
-    height = height,
-    col = 1,                                      -- Start from the left edge
-    row = math.floor((vim.o.lines - height) / 2), -- Centered vertically
-    style = "minimal",
-    border = "rounded"
-  }
-
-  local win = vim.api.nvim_open_win(buf, true, opts)
-  vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '<cmd>lua vim.api.nvim_win_close(' .. win .. ', true)<CR>',
-    { noremap = true, silent = true })
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "loading yaml" })
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+local function yaml_window(number)
+  local yaml_float = require("gh-actions.window").new_float():pos_center():buf_set_filetype("yaml"):create()
+  yaml_float:write_buf({ "Loading workflow definition" })
 
   local lines = {}
   vim.fn.jobstart(string.format("gh workflow view %s --ref %s  --yaml", number, get_branch_name()), {
@@ -149,10 +133,8 @@ local function yaml_window(buf, number)
       end
     end,
     on_exit = function(_, b)
+      yaml_float:write_buf(lines)
       if b == 0 then
-        vim.api.nvim_buf_set_option(buf, 'modifiable', true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
         -- check lines for workflow_dispatch:
         local yaml = table.concat(lines, "\n")
         local s = yaml:match("workflow_dispatch:")
@@ -160,17 +142,14 @@ local function yaml_window(buf, number)
         if s ~= nil then
           --try parse inputs
           local inputs = parse_inputs(yaml)
-          local run_float_window = create_run_buf()
-          vim.api.nvim_buf_set_option(run_float_window.run_buf, "filetype", "json")
-          local on_success = function()
-            vim.api.nvim_buf_delete(buf, { force = true })
-            vim.api.nvim_buf_delete(run_float_window.run_buf, { force = true })
-            vim.cmd("Actions list")
-          end
+          yaml_float:pos_left()
 
-          run_window(run_float_window.win, run_float_window.run_buf, number, buf, on_success, inputs)
+          local run_float_window = require("gh-actions.window").new_float():pos_right():buf_set_filetype("json")
+              :link_close(yaml_float):create()
 
-          vim.api.nvim_buf_set_extmark(run_float_window.run_buf, ns_id, 0, 0, {
+          run_window(run_float_window, number, yaml_float, inputs)
+
+          vim.api.nvim_buf_set_extmark(run_float_window.buf, ns_id, 0, 0, {
             virt_text = { { string.format("<leader>r to run"), "Character" } },
             virt_text_pos = "right_align",
             priority = 200,
@@ -178,16 +157,12 @@ local function yaml_window(buf, number)
 
           vim.api.nvim_set_current_win(run_float_window.win)
         else
-          vim.api.nvim_buf_set_extmark(buf, ns_id, 0, 0, {
+          vim.api.nvim_buf_set_extmark(yaml_float.buf, ns_id, 0, 0, {
             virt_text = { { string.format("This action does not support manual trigger"), "ErrorMsg" } },
             virt_text_pos = "right_align",
             priority = 200,
           })
         end
-      else
-        vim.api.nvim_buf_set_option(buf, 'modifiable', true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
       end
     end
   })
@@ -230,9 +205,7 @@ M.run = function()
   vim.keymap.set('n', '<leader>r', function()
     local line_num = vim.api.nvim_win_get_cursor(0)[1]
     local id = workflows[line_num - 2].id
-    local yaml_buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(yaml_buf, "filetype", "yaml")
-    yaml_window(yaml_buf, id)
+    yaml_window(id)
   end, { buffer = buf.bufnr, noremap = true, silent = true })
 end
 
