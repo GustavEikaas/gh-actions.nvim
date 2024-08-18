@@ -241,7 +241,7 @@ local function populate_list(buf)
         buf.write_table(lines, order)
         local ns_id = require("gh-actions.constants").ns_id
         vim.api.nvim_buf_set_extmark(buf.bufnr, ns_id, 0, 0, {
-          virt_text = { { string.format("<leader>r to refresh"), "Character" } },
+          virt_text = { { string.format("auto refresh enabled"), "Character" } },
           virt_text_pos = "right_align",
           priority = 200,
         })
@@ -257,14 +257,44 @@ local function populate_list(buf)
   end, { buffer = buf.bufnr, noremap = true, silent = true })
 end
 
+
 M.list = function()
   local buf_name = "Workflow runs"
   local buf = require("gh-actions.render").createStdoutBuf(buf_name)
+  local focused = true
   populate_list(buf)
+
+  local function refresh()
+    if focused == false then
+      return
+    end
+    populate_list(buf)
+    vim.defer_fn(refresh, 30000)
+    local ns_id = require("gh-actions.constants").ns_id
+  end
+
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+    buffer = buf.bufnr,
+    callback = function()
+      focused = true
+      refresh()
+    end
+  })
+
+  vim.api.nvim_create_autocmd({ "BufLeave", "BufWinLeave" }, {
+    buffer = buf.bufnr,
+    callback = function()
+      focused = false
+    end
+  })
+
+  refresh()
+
   vim.keymap.set('n', '<leader>r', function()
     vim.notify("Refreshing")
     populate_list(buf)
   end, { buffer = buf.bufnr, noremap = true, silent = true })
+
   buf.write({ "Loading actions..." })
 end
 
