@@ -122,44 +122,44 @@ end
 
 local function job_stderr_float(id, float)
   local lines = {}
+  local stderr_float = require("gh-actions.window").new_float():pos_right():on_win_close(function()
+    float:pos_center()
+  end):create():write_buf({ "Loading stacktrace" })
+  float:pos_left()
+
   vim.fn.jobstart(string.format("gh run view %s --log-failed", id), {
     stdout_buffered = true,
     on_stdout = function(_, data)
       for _, line in ipairs(data) do
-        local pattern = "^(%w+)%s+(%w+)%s+([%d%-:T%.Z]+)%s+(.*)$"
-        local job_name, step_name, timestamp, stderr = line:match(pattern)
+        local pattern = "^(.-)%s+([%d%-:T%.Z]+)%s+(.*)$"
+        local job_name, timestamp, stderr = line:match(pattern)
         if job_name == nil then
           return
         end
         table.insert(lines, {
           job_name = job_name,
-          step_name = step_name,
           timestamp = timestamp,
           stderr = stderr
         })
       end
     end,
     on_exit = function(_, b)
-      local stderr = require("gh-actions.window").new_float():pos_right():on_win_close(function()
-        float:pos_center()
-      end):create()
-      float:pos_left()
-
       float:on_win_close(function()
-        if vim.api.nvim_win_is_valid(stderr.win) then
-          vim.api.nvim_win_close(stderr.win, true)
+        if vim.api.nvim_win_is_valid(stderr_float.win) then
+          vim.api.nvim_win_close(stderr_float.win, true)
         end
       end)
 
       local buf_lines = {}
       for _, value in ipairs(lines) do
-        table.insert(buf_lines, string.format("%s: %s", value.step_name, value.stderr))
+        table.insert(buf_lines, string.format("%s: %s", value.job_name, value.stderr))
       end
-      stderr:write_buf(buf_lines)
+      stderr_float:write_buf(buf_lines)
 
       for line_index, value in ipairs(lines) do
-        vim.api.nvim_buf_add_highlight(stderr.buf, require("gh-actions.constants").ns_id, "ErrorMsg", line_index - 1,
-          #value.step_name + 2, -1)
+        vim.api.nvim_buf_add_highlight(stderr_float.buf, require("gh-actions.constants").ns_id, "ErrorMsg",
+          line_index - 1,
+          #value.job_name + 2, -1)
       end
     end
   })
@@ -178,8 +178,8 @@ local function update_job_details(id, float)
     on_exit = function(_, b)
       if b == 0 then
         float:write_buf(get_job_details_lines(job_details))
-        vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Question", 0, 0, -1)
 
+        vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Question", 0, 0, -1)
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Directory", 2, 0, -1)
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Directory", 3, 0, -1)
         vim.api.nvim_buf_add_highlight(buf, require("gh-actions.constants").ns_id, "Directory", 4, 0, -1)
@@ -189,12 +189,12 @@ local function update_job_details(id, float)
         end
 
         if #job_details.conclusion == 0 then
-          local function s()
+          local function refresh_job_details()
             if vim.api.nvim_win_is_valid(win) and vim.api.nvim_buf_is_valid(buf) then
-              update_job_details(id)
+              update_job_details(id, float)
             end
           end
-          vim.defer_fn(s, 5000)
+          vim.defer_fn(refresh_job_details, 5000)
           vim.api.nvim_buf_set_extmark(buf, require("gh-actions.constants").ns_id, 0, 0, {
             virt_text = { { string.format("auto refresh enabled"), "Character" } },
             virt_text_pos = "right_align",
@@ -209,8 +209,10 @@ local function update_job_details(id, float)
 end
 
 local function job_details_float(id)
-  local float = require("gh-actions.window").new_float():create()
-  float:write_buf({ "Loading job run.." })
+  local float = require("gh-actions.window")
+      .new_float()
+      :create()
+      :write_buf({ "Loading job run.." })
   update_job_details(id, float)
 end
 

@@ -91,12 +91,11 @@ local function run_window(run_float, number, yaml_float, inputs)
   run_float:write_buf(getDefaultBufferState(inputs))
   vim.api.nvim_buf_set_option(run_float.buf, 'modifiable', true)
 
-
   local function on_success()
     run_float:close()
-    yaml_float:close()
     vim.cmd("Actions list")
   end
+
   vim.keymap.set('n', '<leader>r', function()
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local json = vim.fn.json_decode(table.concat(lines, ""))
@@ -116,8 +115,12 @@ end
 
 
 local function yaml_window(number)
-  local yaml_float = require("gh-actions.window").new_float():pos_center():buf_set_filetype("yaml"):create()
-  yaml_float:write_buf({ "Loading workflow definition" })
+  local yaml_float = require("gh-actions.window")
+      .new_float()
+      :pos_center()
+      :buf_set_filetype("yaml")
+      :create()
+      :write_buf({ "Loading workflow definition" })
 
   local lines = {}
   vim.fn.jobstart(string.format("gh workflow view %s --ref %s  --yaml", number, get_branch_name()), {
@@ -144,8 +147,12 @@ local function yaml_window(number)
           local inputs = parse_inputs(yaml)
           yaml_float:pos_left()
 
-          local run_float_window = require("gh-actions.window").new_float():pos_right():buf_set_filetype("json")
-              :link_close(yaml_float):create()
+          local run_float_window = require("gh-actions.window")
+              .new_float()
+              :pos_right()
+              :buf_set_filetype("json")
+              :link_close(yaml_float)
+              :create()
 
           run_window(run_float_window, number, yaml_float, inputs)
 
