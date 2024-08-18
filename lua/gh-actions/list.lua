@@ -226,7 +226,7 @@ local function populate_list(buf)
         for _, value in ipairs(json) do
           local wf_run = {
             status = value.status == "queued" and "🕐" or value.status == "in_progress" and "🔁" or
-                value.conclusion == "failure" and "❌" or "✔ ",
+                value.conclusion == "failure" and "❌" or "✅",
             title = value.displayTitle,
             branch = value.headBranch,
             name = value.name,
