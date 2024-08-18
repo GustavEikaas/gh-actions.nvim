@@ -38,7 +38,11 @@ Actions list
 ### List
 
 ![image](https://github.com/user-attachments/assets/355ff0a1-e25b-4c94-b4be-68375d2963b7)
+### Auto refresh enabled when workflow is still running
 ![image](https://github.com/user-attachments/assets/5b34031b-24db-4710-9a92-f15afd7f63f7)
+### Automatic stack trace on failed workflow run
+![image](https://github.com/user-attachments/assets/dc034b8d-4f6b-4549-81df-0fdf0200dbf8)
+
 
 #### Keymap
 
