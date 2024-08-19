@@ -239,7 +239,6 @@ local function populate_list(buf)
       on_exit = function()
         vim.keymap.set('n', '<leader>o', function()
           local line_num = vim.api.nvim_win_get_cursor(0)[1]
-          vim.notify("lines " .. #lines)
           local line = lines[line_num - 2]
           if line == nil then
             return
