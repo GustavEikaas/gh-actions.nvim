@@ -162,7 +162,7 @@ M.run = function()
     stdout_buffered = true,
     on_stdout = function(_, data)
       for _, value in ipairs(data) do
-        local pattern = "(%w[%w%s]*)%s+(%w+)%s+(%d+)"
+        local pattern = "^(.-)%s+(active)%s+(%d+)%s*$"
         local name, _, number = value:match(pattern)
         table.insert(workflows, { name = name, id = number })
       end
